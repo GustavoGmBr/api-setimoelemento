@@ -1,0 +1,27 @@
+[Unit]
+Description=Setimo Elemento API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=setimo-api
+Group=setimo-api
+WorkingDirectory=/opt/setimoelemento-api
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3335
+ExecStart=/usr/bin/node /opt/setimoelemento-api/dist/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

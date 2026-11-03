@@ -1,0 +1,37 @@
+{
+  "name": "setimo-elemento-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "criar-admin": "tsx src/scripts/criar-admin.ts",
+    "seed:regras": "tsx src/scripts/seed-regras.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.2",
+    "basic-ftp": "^5.0.5",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.10.0",
+    "prisma": "^6.19.2",
+    "tsx": "^4.20.0",
+    "typescript": "~5.6.3"
+  }
+}

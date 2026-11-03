@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model sagas {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(255)
+  descricao String?  @db.Text
+  livros    livros[]
+
+  @@map("sagas")
+}
+
+model livros {
+  id                   Int                    @id @default(autoincrement())
+  titulo               String                 @db.VarChar(255)
+  sinopse              String?                @db.Text
+  data_publicacao      DateTime?              @db.Date
+  ordem_serie          Int?
+  capa                 String?                @db.VarChar(500)
+  saga_id              Int?
+  capitulos            capitulos[]
+  saga                 sagas?                 @relation(fields: [saga_id], references: [id])
+  personagemHistoricos personagem_historico[]
+
+  @@index([saga_id], map: "livros_saga_id_fkey")
+  @@map("livros")
+}
+
+model capitulos {
+  id                        Int                    @id @default(autoincrement())
+  livro_id                  Int
+  parent_id                 Int?
+  numero                    Int
+  titulo                    String
+  personagens_participantes Json?
+  formas_participantes      Json?
+  itens_participantes       Json?
+  locais_participantes      Json?
+  criaturas_participantes   Json?
+  conteudo_json             Json?
+  livros                    livros                 @relation(fields: [livro_id], references: [id], onDelete: Cascade)
+  parent                    capitulos?             @relation("SubCapitulos", fields: [parent_id], references: [id], onDelete: Cascade)
+  children                  capitulos[]            @relation("SubCapitulos")
+  personagemHistoricos      personagem_historico[]
+  inventarios               inventarios[]
+
+  @@index([livro_id], map: "livro_id")
+  @@index([parent_id], map: "parent_id")
+  @@map("capitulos")
+}
+
+model locais {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(255)
+  mundo     String   @db.VarChar(255)
+  dimensao  String?  @db.VarChar(255)
+  descricao String?  @db.Text
+  /// Galeria de imagens do local; `imagem` permanece como capa para compatibilidade.
+  imagens   Json?
+  imagem    String?
+  criado_em DateTime @default(now())
+
+  @@map("locais")
+}
+
+model personagens {
+  id                  Int                    @id @default(autoincrement())
+  nome                String
+  apelido             String?
+  sistema             String                 @default("Nenhum") @db.VarChar(40)
+  karma               String                 @default("Neutro") @db.VarChar(20)
+  sexo                String?                @db.VarChar(20)
+  titulo              String?
+  mundo_origem        String?
+  classe              String?
+  afiliacao           String?
+  altura              String?
+  peso                String?
+  tipo_corporal       String?
+  tipo_cabelo         String?
+  cor_cabelo          String?
+  olhos               String?
+  olhos_especiais     String?
+  tom_voz             String?
+  traje_combate       String?                @db.Text
+  traje_casual        String?                @db.Text
+  armamento_principal String?
+  virtude             String?
+  defeito             String?
+  temperamento        String?
+  imagemCorpo         String?
+  imagemRosto         String?
+  criado_em           DateTime               @default(now())
+  atualizado_em       DateTime               @updatedAt
+  formas              personagem_forma[]
+  historicos          personagem_historico[]
+
+  @@map("personagens")
+}
+
+model personagem_historico {
+  id                    Int         @id @default(autoincrement())
+  personagem_id         Int
+  livro_id              Int?
+  capitulo_id           Int?
+  idade                 Int?
+  titulo                String?
+  raca_id               Int
+  ranque                String?
+  subnivel              Int         @default(1)
+  classificacao         String?
+  nivel                 Int         @default(1)
+  xpAtual               Int         @default(0)
+  xpProximo             Int         @default(100)
+  qtd_treino            Int         @default(0)
+  ponto_combate         Int         @default(0)
+  ponto_combateAetheris Int         @default(0)
+  bonusPCErion          Int         @default(0)
+  classes               String?
+  /// Lutador, Duelista, Atirador, Mago ou Suporte (fixos).
+  arquetipo             String?     @db.VarChar(40)
+  /// Legados, sem uso no novo cadastro (substituídos por arquétipo e classe).
+  estilo_luta           String?
+  maestria              String?
+  elementos             Json?
+  equipamento           Json?
+  habilidades           Json?
+  formas_desbloqueadas  Json?
+  criado_em             DateTime    @default(now())
+  capitulo              capitulos?  @relation(fields: [capitulo_id], references: [id])
+  livro                 livros?     @relation(fields: [livro_id], references: [id])
+  personagem            personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
+  raca                  racas       @relation(fields: [raca_id], references: [id])
+  bolsa                 bolsas?
+
+  @@index([personagem_id])
+  @@index([capitulo_id], map: "personagem_historico_capitulo_id_fkey")
+  @@index([livro_id], map: "personagem_historico_livro_id_fkey")
+  @@index([raca_id], map: "personagem_historico_raca_id_fkey")
+  @@map("personagem_historico")
+}
+
+model personagem_forma {
+  id            Int         @id @default(autoincrement())
+  personagem_id Int         @map("personagem_id")
+  nome          String
+  descricao     String?     @db.Text
+  imagemRosto   String?     @map("imagem_rosto")
+  imagemCorpo   String?     @map("imagem_corpo")
+  criado_em     DateTime    @default(now())
+  atualizado_em DateTime    @updatedAt
+  personagem    personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
+
+  @@index([personagem_id])
+  @@map("personagem_formas")
+}
+
+model inventarios {
+  id           Int       @id @default(autoincrement())
+  /// Bolsa a que o item pertence (cada momento da história tem a sua).
+  bolsa_id     Int?
+  /// Legado: bolsa por capítulo, sem dono. Os cadastros novos usam historico_id.
+  capitulo_id  Int?
+  nome         String    @db.VarChar(255)
+  descricao    String?   @db.Text
+  tipo         String?   @db.VarChar(100)
+  subtipo      String?   @db.VarChar(100)
+  grau         String?   @db.VarChar(100)
+  quantidade   Decimal   @default(0.00) @db.Decimal(18, 2)
+  itensId_item Int?
+  capitulo     capitulos? @relation(fields: [capitulo_id], references: [id], onDelete: Cascade)
+  bolsa        bolsas?   @relation(fields: [bolsa_id], references: [id], onDelete: Cascade)
+  itens        itens?    @relation(fields: [itensId_item], references: [id_item])
+
+  @@index([capitulo_id], map: "inventarios_capitulo_id_fkey")
+  @@index([itensId_item], map: "inventarios_itensId_item_fkey")
+  @@index([bolsa_id])
+  @@map("inventarios")
+}
+
+/// Bolsa de um personagem num momento da história (inventário estilo RPG, com espaços limitados).
+model bolsas {
+  id           Int                  @id @default(autoincrement())
+  historico_id Int                  @unique
+  nome         String               @default("Bolsa") @db.VarChar(100)
+  /// Quantidade de espaços para itens (moedas não ocupam espaço)
+  slots        Int                  @default(30)
+  historico    personagem_historico @relation(fields: [historico_id], references: [id], onDelete: Cascade)
+  inventarios  inventarios[]
+
+  @@map("bolsas")
+}
+
+model sistemas {
+  id            Int      @id @default(autoincrement())
+  nome          String   @unique
+  progressao    Json
+  limite_bonus  Json
+  /// Se preenchido (1 a 5), o sistema trava as estrelas nesse valor (ex.: Demônios = 3).
+  estrela_fixa  Int?
+  /// Como as linhagens do sistema são chamadas ("Raça", "Hierarquia"…).
+  rotulo_linhagem String @default("Raça") @db.VarChar(40)
+  /// Último ranque aberto: depois dele a escala continua em degraus com estrelas (X, X 1⭐, X 2⭐…).
+  ranque_aberto Boolean  @default(false)
+  /// PC de cada estrela do ranque aberto.
+  degrau_estrela Int?
+  /// Limite de estrelas do ranque aberto (vazio = sem limite).
+  max_estrelas  Int?
+  /// Em qual calculadora o sistema vale: "erion", "aetheris" ou "ambos".
+  calculadora   String   @default("ambos") @db.VarChar(10)
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+  racas         racas[]
+  itens         itens[]
+  criaturas     bestiario[]
+
+  @@map("sistemas")
+}
+
+model racas {
+  id         Int                    @id @default(autoincrement())
+  nome       String                 @db.VarChar(80)
+  base       Int
+  limite     Int
+  mundo      String                 @default("Geral") @db.VarChar(80)
+  sistema_id Int
+  criado_em  DateTime               @default(now())
+  historicos personagem_historico[]
+  sistema    sistemas               @relation(fields: [sistema_id], references: [id])
+
+  @@index([sistema_id], map: "racas_sistema_id_fkey")
+  @@map("racas")
+}
+
+model usuarios {
+  id_usuario   Int       @id @default(autoincrement())
+  login        String    @unique(map: "login") @db.VarChar(100)
+  senha        String    @db.VarChar(255)
+  nivel_acesso Int       @default(1)
+  data_criacao DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("usuarios")
+}
+
+model itens {
+  id_item          Int           @id @default(autoincrement())
+  nome             String        @db.VarChar(100)
+  tipo             String        @db.VarChar(80)
+  descricao        String?       @db.Text
+  aparencia        String?       @db.Text
+  listaHabilidades Json
+  urlImagem        String?       @db.VarChar(255)
+  usuarios         Json?
+  /// "equipamento" (arma, armadura, acessório) ou "item" (consumível, material, item chave)
+  categoria        String        @default("item") @db.VarChar(20)
+  /// Erion, Aetheris ou Geral
+  mundo            String        @default("Geral") @db.VarChar(40)
+  /// Classe do item: sistema de poder e ranque dentro dele
+  sistema_id       Int?
+  ranque           String?       @db.VarChar(40)
+  /// Efeitos de um consumível
+  efeitos          String?       @db.Text
+  /// Material: quanto rende ao ser vendido
+  valor_venda      Decimal?      @db.Decimal(18, 2)
+  /// Consumível e item chave: quanto custa para comprar
+  valor_compra     Decimal?      @db.Decimal(18, 2)
+  createdAt        DateTime      @default(now())
+  sistema          sistemas?     @relation(fields: [sistema_id], references: [id], onDelete: SetNull)
+  inventarios      inventarios[]
+  recursos_criaturas bestiario_recursos[]
+
+  @@index([sistema_id])
+
+  @@map("itens")
+}
+
+model bestiario {
+  id                    Int      @id @default(autoincrement())
+  nome                  String   @db.VarChar(255)
+  tipo                  String   @db.VarChar(100)
+  descricao             String?  @db.Text
+  mundo                 String?  @db.VarChar(255)
+  ranque                String?
+  subnivel              Int      @default(1)
+  classificacao         String?
+  nivelMedio            Int      @default(1) @map("nivel_medio")
+  ponto_combate         Int      @default(0)
+  ponto_combateAetheris Int      @default(0)
+  imagemBestiario       String?  @map("imagem_bestiario")
+  /// Classe: sistema de poder da criatura (o ranque fica em `ranque`)
+  sistema_id            Int?
+  /// Habilidades e efeitos passivos: [{ nome, descricao }]
+  habilidades           Json?
+  /// Descrição estética
+  aparencia             String?  @db.Text
+  criado_em             DateTime @default(now())
+  atualizado_em         DateTime @updatedAt
+  sistema               sistemas? @relation(fields: [sistema_id], references: [id], onDelete: SetNull)
+  recursos              bestiario_recursos[]
+
+  @@index([sistema_id])
+
+  @@map("bestiario")
+}
+
+/// Recursos que uma criatura concede: um item cadastrado ou um recurso próprio da criatura.
+model bestiario_recursos {
+  id           Int       @id @default(autoincrement())
+  bestiario_id Int
+  item_id      Int?
+  nome         String    @db.VarChar(255)
+  descricao    String?   @db.Text
+  criatura     bestiario @relation(fields: [bestiario_id], references: [id], onDelete: Cascade)
+  item         itens?    @relation(fields: [item_id], references: [id_item])
+
+  @@index([bestiario_id])
+  @@index([item_id])
+  @@map("bestiario_recursos")
+}
