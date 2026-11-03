@@ -13,6 +13,7 @@ import { uploadsPrivados } from './modules/uploads/uploads.routes.js'
 import { sagasPrivadas, sagasPublicas } from './modules/sagas/sagas.routes.js'
 import { sistemasPrivados, sistemasPublicos } from './modules/sistemas/sistemas.routes.js'
 import { racasPrivadas, racasPublicas } from './modules/racas/racas.routes.js'
+import { leitoresRoutes } from './modules/leitores/leitores.routes.js'
 
 export const routes = Router()
 
@@ -26,6 +27,7 @@ routes.get('/health', async (_req, res) => {
 })
 
 routes.use('/auth', authRoutes)
+routes.use('/leitores', leitoresRoutes)
 
 routes.use('/sagas', sagasPublicas)
 routes.use('/private/sagas', sagasPrivadas)

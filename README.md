@@ -14,7 +14,9 @@ ADMIN_SENHA='...' npm run criar-admin -- seu_login
 Estrutura: `src/modules/<recurso>` (rotas + schemas), `src/middlewares`, `src/config/env.ts`
 (valida o `.env` ao iniciar), `src/lib`.
 
-Módulos prontos: auth (`POST /auth/login`, `GET /auth/me`), sagas, livros.
+Módulos prontos: auth administrativa, leitores (`POST /leitores/cadastro`, `POST /leitores/login`), sagas, livros e capítulos públicos.
+
+O cadastro de leitor, comentários, avaliações e progresso usam as tabelas `leitores`, `comentarios_subcapitulos`, `avaliacoes_subcapitulos` e `leituras_salvas`. Depois de atualizar o servidor, aplique o schema com `npm run prisma:push` no diretório `server`; o deploy não altera o banco automaticamente.
 
 ## Produção na VPS
 

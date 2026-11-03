@@ -49,6 +49,9 @@ model capitulos {
   children                  capitulos[]            @relation("SubCapitulos")
   personagemHistoricos      personagem_historico[]
   inventarios               inventarios[]
+  leiturasSalvas            leitura_salva[]
+  comentariosLeitores       comentario_subcapitulo[]
+  avaliacoesLeitores        avaliacao_subcapitulo[]
 
   @@index([livro_id], map: "livro_id")
   @@index([parent_id], map: "parent_id")
@@ -246,6 +249,56 @@ model usuarios {
   data_criacao DateTime? @default(now()) @db.Timestamp(0)
 
   @@map("usuarios")
+}
+
+model leitores {
+  id             Int                    @id @default(autoincrement())
+  login          String                 @unique @db.VarChar(100)
+  senha          String                 @db.VarChar(255)
+  criado_em      DateTime               @default(now())
+  leituras       leitura_salva[]
+  comentarios    comentario_subcapitulo[]
+  avaliacoes     avaliacao_subcapitulo[]
+  @@map("leitores")
+}
+
+model leitura_salva {
+  id             Int      @id @default(autoincrement())
+  leitor_id      Int
+  livro_id       Int
+  capitulo_id    Int
+  atualizado_em  DateTime @updatedAt
+  leitor         leitores @relation(fields: [leitor_id], references: [id], onDelete: Cascade)
+  capitulo       capitulos @relation(fields: [capitulo_id], references: [id], onDelete: Cascade)
+  @@unique([leitor_id, livro_id])
+  @@index([capitulo_id])
+  @@map("leituras_salvas")
+}
+
+model comentario_subcapitulo {
+  id             Int      @id @default(autoincrement())
+  leitor_id      Int
+  capitulo_id    Int
+  texto          String   @db.Text
+  criado_em      DateTime @default(now())
+  leitor         leitores @relation(fields: [leitor_id], references: [id], onDelete: Cascade)
+  capitulo       capitulos @relation(fields: [capitulo_id], references: [id], onDelete: Cascade)
+  @@index([capitulo_id, criado_em])
+  @@map("comentarios_subcapitulos")
+}
+
+model avaliacao_subcapitulo {
+  id             Int      @id @default(autoincrement())
+  leitor_id      Int
+  capitulo_id    Int
+  nota           Int
+  criado_em      DateTime @default(now())
+  atualizado_em  DateTime @updatedAt
+  leitor         leitores @relation(fields: [leitor_id], references: [id], onDelete: Cascade)
+  capitulo       capitulos @relation(fields: [capitulo_id], references: [id], onDelete: Cascade)
+  @@unique([leitor_id, capitulo_id])
+  @@index([capitulo_id])
+  @@map("avaliacoes_subcapitulos")
 }
 
 model itens {

@@ -8,13 +8,16 @@ const payloadSchema = z.object({
   id_usuario: z.number().int(),
   nivel_acesso: z.number().int(),
 })
+const leitorPayloadSchema = z.object({ id_leitor: z.number().int() })
 export type UsuarioToken = z.infer<typeof payloadSchema>
+export type LeitorToken = z.infer<typeof leitorPayloadSchema>
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       usuario?: UsuarioToken
+      leitor?: LeitorToken
     }
   }
 }
@@ -29,6 +32,18 @@ export const autenticar: RequestHandler = (req, _res, next) => {
     next()
   } catch {
     throw new HttpError(401, 'Token inválido ou expirado')
+  }
+}
+
+/** Token exclusivo para operações da conta de leitor. */
+export const autenticarLeitor: RequestHandler = (req, _res, next) => {
+  const [tipo, token] = (req.headers.authorization ?? '').split(' ')
+  if (tipo !== 'Bearer' || !token) throw new HttpError(401, 'Token não fornecido')
+  try {
+    req.leitor = leitorPayloadSchema.parse(jwt.verify(token, env.JWT_SECRET))
+    next()
+  } catch {
+    throw new HttpError(401, 'Token de leitor inválido ou expirado')
   }
 }
 
