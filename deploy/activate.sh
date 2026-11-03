@@ -24,7 +24,9 @@ fi
 chown root:setimo-api .env
 chmod 640 .env
 install -o root -g root -m 644 deploy/setimoelemento-api.service /etc/systemd/system/setimoelemento-api.service
-install -o root -g root -m 644 deploy/nginx.conf /etc/nginx/sites-available/setimoelemento-api
+if [ ! -f /etc/nginx/sites-available/setimoelemento-api ]; then
+    install -o root -g root -m 644 deploy/nginx.conf /etc/nginx/sites-available/setimoelemento-api
+fi
 ln -sfn /etc/nginx/sites-available/setimoelemento-api /etc/nginx/sites-enabled/setimoelemento-api
 nginx -t
 systemctl daemon-reload

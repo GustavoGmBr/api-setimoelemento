@@ -49,6 +49,25 @@ nginx -t
 certbot renew --dry-run
 ```
 
+Implantação configurada em 03/11/2026: Debian 12, Node.js 24.19.0,
+diretório `/opt/setimoelemento-api`, serviço `setimoelemento-api` e HTTPS
+com renovação automática pelo timer `certbot.timer`.
+
+Para publicar uma nova versão depois de enviar os commits ao GitHub:
+
+```sh
+bash /opt/setimoelemento-api/deploy/update.sh
+```
+
+O script recompila e reinicia a API sem executar mudanças no banco ou sobrescrever
+o `.env` e o HTTPS. Se houver mudanças no schema, planejar migração e backup antes
+da atualização. Para conferir as colunas do banco e o login FTP sem alterar dados:
+
+```sh
+cd /opt/setimoelemento-api
+node deploy/verify.mjs
+```
+
 ## Arquivos enviados (imagens)
 
 O painel envia a imagem para a API (`POST /api/private/uploads/:destino`) e a API a coloca na **hospedagem do site por FTP**
