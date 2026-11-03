@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
@@ -16,7 +18,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
-    "basic-ftp": "^5.0.5",
+    "basic-ftp": "^6.2.5",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",

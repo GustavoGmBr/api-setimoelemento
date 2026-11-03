@@ -11,7 +11,8 @@ WorkingDirectory=/opt/setimoelemento-api
 Environment=NODE_ENV=production
 Environment=HOST=127.0.0.1
 Environment=PORT=3335
-ExecStart=/usr/bin/node /opt/setimoelemento-api/dist/server.js
+Environment=NODE_OPTIONS=--max-old-space-size=192
+ExecStart=/usr/local/bin/node /opt/setimoelemento-api/dist/server.js
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
