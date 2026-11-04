@@ -154,7 +154,12 @@ model personagem_forma {
   id            Int         @id @default(autoincrement())
   personagem_id Int         @map("personagem_id")
   nome          String
+  tipo          String      @default("Transformação") @db.VarChar(40)
   descricao     String?     @db.Text
+  multiplicador Float       @default(0)
+  base_pc       String      @default("soma") @db.VarChar(20)
+  padrao        Boolean     @default(false)
+  antiga        Boolean     @default(false)
   imagemRosto   String?     @map("imagem_rosto")
   imagemCorpo   String?     @map("imagem_corpo")
   criado_em     DateTime    @default(now())

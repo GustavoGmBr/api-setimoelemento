@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma.js'
 import { autenticar } from '../../middlewares/auth.js'
 import { removerArquivo } from '../../services/ftp.js'
 import { personagemSchema } from './personagens.schemas.js'
+import { formaSchema } from './formas.schemas.js'
 
 /** Campos da lista (cartões e seletores). */
 const resumo = {
@@ -104,7 +105,7 @@ personagensPrivados.delete('/:id', async (req, res) => {
 
 const filtroFormas = z.object({ personagem_id: z.coerce.number().int().positive().optional() })
 
-/** Formas (leitura por enquanto; o cadastro entra no módulo de formas). */
+/** Formas públicas disponíveis para capítulos e fichas de leitura. */
 export const formasPublicas = Router()
 
 formasPublicas.get('/', async (req, res) => {
@@ -113,7 +114,43 @@ formasPublicas.get('/', async (req, res) => {
     await prisma.personagem_forma.findMany({
       where: personagem_id ? { personagem_id } : {},
       orderBy: { nome: 'asc' },
-      select: { id: true, nome: true, personagem_id: true, imagemRosto: true },
+      select: { id: true, nome: true, personagem_id: true, tipo: true, descricao: true, multiplicador: true, base_pc: true, padrao: true, antiga: true, imagemRosto: true, imagemCorpo: true },
     }),
   )
+})
+
+/** Gestão de formas pelo autor: /api/private/formas */
+export const formasPrivadas = Router()
+formasPrivadas.use(autenticar)
+
+formasPrivadas.post('/', async (req, res) => {
+  const dados = formaSchema.parse(req.body)
+  const personagem = await prisma.personagens.findUnique({ where: { id: dados.personagem_id }, select: { id: true } })
+  if (!personagem) throw naoEncontrado('Personagem')
+  const { padrao, ...campos } = dados
+  if (padrao) await prisma.personagem_forma.updateMany({ where: { personagem_id: dados.personagem_id, padrao: true }, data: { padrao: false, antiga: true } })
+  res.status(201).json(await prisma.personagem_forma.create({ data: { ...campos, padrao, antiga: false } }))
+})
+
+formasPrivadas.put('/:id', async (req, res) => {
+  const id = idDaRota(req)
+  const atual = await prisma.personagem_forma.findUnique({ where: { id } })
+  if (!atual) throw naoEncontrado('Forma')
+  const dados = formaSchema.parse({ ...req.body, personagem_id: atual.personagem_id })
+  const { padrao, ...campos } = dados
+  if (padrao) await prisma.personagem_forma.updateMany({ where: { personagem_id: atual.personagem_id, id: { not: id }, padrao: true }, data: { padrao: false, antiga: true } })
+  const forma = await prisma.personagem_forma.update({ where: { id }, data: { ...campos, padrao, ...(padrao ? { antiga: false } : {}) } })
+  if (atual.imagemRosto && atual.imagemRosto !== forma.imagemRosto) await removerArquivo(atual.imagemRosto)
+  if (atual.imagemCorpo && atual.imagemCorpo !== forma.imagemCorpo) await removerArquivo(atual.imagemCorpo)
+  res.json(forma)
+})
+
+formasPrivadas.delete('/:id', async (req, res) => {
+  const id = idDaRota(req)
+  const forma = await prisma.personagem_forma.findUnique({ where: { id }, select: { imagemRosto: true, imagemCorpo: true } })
+  if (!forma) throw naoEncontrado('Forma')
+  await prisma.personagem_forma.delete({ where: { id } })
+  await removerArquivo(forma.imagemRosto)
+  await removerArquivo(forma.imagemCorpo)
+  res.status(204).end()
 })

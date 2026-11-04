@@ -55,16 +55,21 @@ export async function obter(id: number) {
   const pai = capitulo.parent_id
     ? await prisma.capitulos.findUnique({ where: { id: capitulo.parent_id }, select: { personagens_participantes: true, formas_participantes: true } })
     : null
-  const idsFormas = lerIds(capitulo.formas_participantes).length ? capitulo.formas_participantes : pai?.formas_participantes
-  const idsElenco = lerIds(capitulo.personagens_participantes).length ? capitulo.personagens_participantes : pai?.personagens_participantes
+  const idsFormasAtuais = lerIds(capitulo.formas_participantes)
+  const idsFormas = idsFormasAtuais.length ? idsFormasAtuais : lerIds(pai?.formas_participantes)
+  const idsElencoAtual = lerIds(capitulo.personagens_participantes)
+  const idsElenco = idsElencoAtual.length ? idsElencoAtual : lerIds(pai?.personagens_participantes)
 
   const [personagens, formas, locais, itens, criaturas] = await Promise.all([
     buscar(idsElenco, (in_) =>
       prisma.personagens.findMany({ where: { id: { in: in_ } }, select: { id: true, nome: true, apelido: true, sexo: true, imagemRosto: true } }),
     ),
-    buscar(idsFormas, (in_) =>
-      prisma.personagem_forma.findMany({ where: { id: { in: in_ } }, select: { id: true, nome: true, personagem_id: true, imagemRosto: true } }),
-    ),
+    idsFormas.length || idsElenco.length
+      ? prisma.personagem_forma.findMany({
+          where: { OR: [{ id: { in: idsFormas } }, { personagem_id: { in: idsElenco }, padrao: true }] },
+          select: { id: true, nome: true, personagem_id: true, tipo: true, descricao: true, multiplicador: true, base_pc: true, padrao: true, antiga: true, imagemRosto: true, imagemCorpo: true },
+        })
+      : Promise.resolve([]),
     buscar(capitulo.locais_participantes, (in_) =>
       prisma.locais.findMany({ where: { id: { in: in_ } }, select: { id: true, nome: true } }),
     ),

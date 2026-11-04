@@ -3,7 +3,7 @@ import { prisma } from './lib/prisma.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { capitulosPrivados, capitulosPublicos } from './modules/capitulos/capitulos.routes.js'
 import { livrosPrivados, livrosPublicos } from './modules/livros/livros.routes.js'
-import { formasPublicas, personagensPrivados, personagensPublicos } from './modules/personagens/personagens.routes.js'
+import { formasPrivadas, formasPublicas, personagensPrivados, personagensPublicos } from './modules/personagens/personagens.routes.js'
 import { itensPrivados, itensPublicos } from './modules/itens/itens.routes.js'
 import { bestiarioPrivado, bestiarioPublico } from './modules/bestiario/bestiario.routes.js'
 import { locaisPrivados, locaisPublicos } from './modules/universo/universo.routes.js'
@@ -44,6 +44,7 @@ routes.use('/private/capitulos', capitulosPrivados)
 
 routes.use('/personagens', personagensPublicos)
 routes.use('/formas', formasPublicas)
+routes.use('/private/formas', formasPrivadas)
 routes.use('/private/historicos', historicosPrivados)
 routes.use('/private/inventarios', inventariosPrivados)
 routes.use('/private/bolsas', bolsasPrivadas)
