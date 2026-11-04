@@ -114,6 +114,7 @@ model personagem_historico {
   capitulo_id           Int?
   idade                 Int?
   titulo                String?
+  resumo                String?     @db.Text
   raca_id               Int
   ranque                String?
   subnivel              Int         @default(1)

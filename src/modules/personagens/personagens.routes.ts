@@ -68,6 +68,14 @@ personagensPublicos.get('/:id/ficha', async (req, res) => {
 export const personagensPrivados = Router()
 personagensPrivados.use(autenticar)
 
+personagensPrivados.get('/exportacao', async (_req, res) => {
+  const personagens = await prisma.personagens.findMany({
+    orderBy: { nome: 'asc' },
+    include: { historicos: { orderBy: { id: 'desc' }, take: 1, select: { resumo: true } } },
+  })
+  res.json(personagens.map(({ historicos, ...personagem }) => ({ ...personagem, resumo_mais_recente: historicos[0]?.resumo ?? null })))
+})
+
 personagensPrivados.post('/', async (req, res) => {
   res.status(201).json(await prisma.personagens.create({ data: personagemSchema.parse(req.body) }))
 })

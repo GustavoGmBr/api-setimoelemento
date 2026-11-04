@@ -41,7 +41,7 @@ leitoresRoutes.get('/me', async (req, res) => {
   res.json({ id_leitor: leitor.id, login: leitor.login, tipo: 'leitor' })
 })
 leitoresRoutes.get('/leituras', async (req, res) => {
-  res.json(await prisma.leitura_salva.findMany({ where: { leitor_id: req.leitor!.id_leitor }, orderBy: { atualizado_em: 'desc' } }))
+  res.json(await prisma.leitura_salva.findMany({ where: { leitor_id: req.leitor!.id_leitor }, orderBy: { atualizado_em: 'desc' }, include: { capitulo: { select: { titulo: true, numero: true, livros: { select: { titulo: true } } } } } }))
 })
 leitoresRoutes.put('/leituras/:livroId', async (req, res) => {
   const livroId = id.parse(req.params.livroId)

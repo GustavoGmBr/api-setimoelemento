@@ -25,6 +25,7 @@ export const historicoSchema = z.object({
   capitulo_id: z.number().int().positive().nullish().transform((v) => v ?? null),
   idade: inteiro().max(100000).nullish().transform((v) => v ?? null),
   titulo: texto(255),
+  resumo: texto(10000),
   raca_id: z.number().int().positive('Escolha a raça'),
 
   // Erion
