@@ -9,7 +9,6 @@ export const formaSchema = z.object({
   tipo: z.enum(['Crescimento', 'Transformação']),
   descricao: texto(10000),
   multiplicador: z.number().min(0).max(10000),
-  base_pc: z.enum(['erion', 'aetheris', 'soma']),
   padrao: z.boolean().default(false),
   imagemRosto: imagem,
   imagemCorpo: imagem,
