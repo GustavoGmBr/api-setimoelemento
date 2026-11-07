@@ -226,6 +226,7 @@ model sistemas {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
   racas         racas[]
+  racas_vinculadas racas_sistemas[]
   itens         itens[]
   criaturas     bestiario[]
 
@@ -242,9 +243,21 @@ model racas {
   criado_em  DateTime               @default(now())
   historicos personagem_historico[]
   sistema    sistemas               @relation(fields: [sistema_id], references: [id])
+  sistemas_vinculados racas_sistemas[]
 
   @@index([sistema_id], map: "racas_sistema_id_fkey")
   @@map("racas")
+}
+
+model racas_sistemas {
+  raca_id    Int
+  sistema_id Int
+  raca       racas    @relation(fields: [raca_id], references: [id], onDelete: Cascade)
+  sistema    sistemas @relation(fields: [sistema_id], references: [id], onDelete: Cascade)
+
+  @@id([raca_id, sistema_id])
+  @@index([sistema_id])
+  @@map("racas_sistemas")
 }
 
 model usuarios {

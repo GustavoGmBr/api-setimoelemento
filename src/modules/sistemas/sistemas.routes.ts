@@ -9,7 +9,7 @@ import { sistemaSchema } from './sistemas.schemas.js'
 export const sistemasPublicos = Router()
 
 sistemasPublicos.get('/', async (_req, res) => {
-  res.json(await prisma.sistemas.findMany({ orderBy: { id: 'asc' }, include: { _count: { select: { racas: true } } } }))
+  res.json(await prisma.sistemas.findMany({ orderBy: { id: 'asc' }, include: { _count: { select: { racas: true, racas_vinculadas: true } } } }))
 })
 
 sistemasPublicos.get('/:id', async (req, res) => {
@@ -42,7 +42,11 @@ sistemasPrivados.put('/:id', async (req, res) => {
 
 sistemasPrivados.delete('/:id', async (req, res) => {
   const id = idDaRota(req)
-  const racas = await prisma.racas.count({ where: { sistema_id: id } })
+  const [racasPrincipais, racasVinculadas] = await Promise.all([
+    prisma.racas.count({ where: { sistema_id: id } }),
+    prisma.racas_sistemas.count({ where: { sistema_id: id } }),
+  ])
+  const racas = Math.max(racasPrincipais, racasVinculadas)
   if (racas > 0) throw new HttpError(409, `Este sistema é usado por ${racas} ${racas === 1 ? 'raça' : 'raças'}. Mude ou exclua essas raças primeiro.`)
   await prisma.sistemas.delete({ where: { id } })
   res.status(204).end()
