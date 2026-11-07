@@ -22,13 +22,21 @@ const resumo = {
 /** Leitura pública: /api/personagens */
 export const personagensPublicos = Router()
 
-personagensPublicos.get('/', async (_req, res) => {
-  res.json(await prisma.personagens.findMany({ orderBy: { nome: 'asc' }, select: resumo }))
+personagensPublicos.get('/', async (req, res) => {
+  const ids = await idsDePersonagensEmCapitulos()
+  if (req.query.spoiler === 'true') {
+    const lista = await prisma.personagens.findMany({ orderBy: { nome: 'asc' }, select: resumo })
+    return res.json(lista.map((personagem) => ({ ...personagem, spoiler: !ids.has(personagem.id) })))
+  }
+  if (ids.size === 0) return res.json([])
+  res.json(await prisma.personagens.findMany({ where: { id: { in: [...ids] } }, orderBy: { nome: 'asc' }, select: resumo }))
 })
 
 personagensPublicos.get('/:id', async (req, res) => {
+  const id = idDaRota(req)
+  if (req.query.spoiler !== 'true' && !(await personagemVinculadoACapitulo(id))) throw naoEncontrado('Personagem')
   const personagem = await prisma.personagens.findUnique({
-    where: { id: idDaRota(req) },
+    where: { id },
     include: { formas: { orderBy: { nome: 'asc' } } },
   })
   if (!personagem) throw naoEncontrado('Personagem')
@@ -38,6 +46,7 @@ personagensPublicos.get('/:id', async (req, res) => {
 /** Ficha completa: personagem + formas + históricos (momentos da história) + bolsa de cada momento. */
 personagensPublicos.get('/:id/ficha', async (req, res) => {
   const id = idDaRota(req)
+  if (req.query.spoiler !== 'true' && !(await personagemVinculadoACapitulo(id))) throw naoEncontrado('Personagem')
   const personagem = await prisma.personagens.findUnique({
     where: { id },
     include: {
@@ -64,6 +73,30 @@ personagensPublicos.get('/:id/ficha', async (req, res) => {
 
   res.json({ ...personagem, bolsas })
 })
+
+/** IDs presentes no elenco salvo dos capítulos ou em um histórico ligado a capítulo. */
+async function idsDePersonagensEmCapitulos(): Promise<Set<number>> {
+  const [capitulos, historicos] = await Promise.all([
+    prisma.capitulos.findMany({ select: { personagens_participantes: true } }),
+    prisma.personagem_historico.findMany({ where: { capitulo_id: { not: null } }, select: { personagem_id: true }, distinct: ['personagem_id'] }),
+  ])
+  const ids = new Set(historicos.map((h) => h.personagem_id))
+  for (const capitulo of capitulos) {
+    if (!Array.isArray(capitulo.personagens_participantes)) continue
+    for (const valor of capitulo.personagens_participantes) {
+      const id = Number(valor)
+      if (Number.isInteger(id) && id > 0) ids.add(id)
+    }
+  }
+  return ids
+}
+
+async function personagemVinculadoACapitulo(id: number): Promise<boolean> {
+  const historico = await prisma.personagem_historico.findFirst({ where: { personagem_id: id, capitulo_id: { not: null } }, select: { id: true } })
+  if (historico) return true
+  const ids = await idsDePersonagensEmCapitulos()
+  return ids.has(id)
+}
 
 /** Escrita (autor): /api/private/personagens */
 export const personagensPrivados = Router()
@@ -114,7 +147,7 @@ formasPublicas.get('/', async (req, res) => {
     await prisma.personagem_forma.findMany({
       where: personagem_id ? { personagem_id } : {},
       orderBy: { nome: 'asc' },
-      select: { id: true, nome: true, personagem_id: true, tipo: true, descricao: true, multiplicador: true, base_pc: true, padrao: true, antiga: true, imagemRosto: true, imagemCorpo: true },
+      select: { id: true, nome: true, personagem_id: true, tipo: true, descricao: true, multiplicador: true, padrao: true, antiga: true, imagemRosto: true, imagemCorpo: true },
     }),
   )
 })
