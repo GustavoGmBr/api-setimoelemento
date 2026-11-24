@@ -17,6 +17,8 @@ const schema = z.object({
     .transform((v) => v === 'true'),
   FTP_REMOTE_ROOT: z.string().optional(), // vazio = pasta do site é a raiz do FTP; ausente = detecta sozinho
   UPLOAD_PUBLIC_URL: z.string().default('https://setimoelemento.com.br/uploads'),
+  // Dias sem acesso até a conta de leitor ser apagada com todos os dados.
+  INATIVIDADE_DIAS: z.coerce.number().int().min(1).default(30),
   JWT_EXPIRES_IN: z.string().default('24h'),
   CORS_ORIGINS: z
     .string()

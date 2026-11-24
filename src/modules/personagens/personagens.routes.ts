@@ -16,8 +16,19 @@ const resumo = {
   sexo: true,
   mundo_origem: true,
   afiliacao: true,
+  karma: true,
+  sistema: true,
   imagemRosto: true,
 } as const
+
+/** Acrescenta o ranque mais recente de cada personagem (Aetheris = `ranque`, Erion = `classificacao`), para filtros e cartões. */
+async function comRanques<T extends { id: number }>(lista: T[]) {
+  if (!lista.length) return lista.map((p) => ({ ...p, ranque: null as string | null, classificacao: null as string | null }))
+  const hist = await prisma.personagem_historico.findMany({ where: { personagem_id: { in: lista.map((p) => p.id) } }, orderBy: { id: 'asc' }, select: { personagem_id: true, ranque: true, classificacao: true } })
+  const ultimo = new Map<number, { ranque: string | null; classificacao: string | null }>()
+  for (const h of hist) ultimo.set(h.personagem_id, { ranque: h.ranque, classificacao: h.classificacao })
+  return lista.map((p) => ({ ...p, ranque: ultimo.get(p.id)?.ranque ?? null, classificacao: ultimo.get(p.id)?.classificacao ?? null }))
+}
 
 /** Leitura pública: /api/personagens */
 export const personagensPublicos = Router()
@@ -26,10 +37,10 @@ personagensPublicos.get('/', async (req, res) => {
   const ids = await idsDePersonagensEmCapitulos()
   if (req.query.spoiler === 'true') {
     const lista = await prisma.personagens.findMany({ orderBy: { nome: 'asc' }, select: resumo })
-    return res.json(lista.map((personagem) => ({ ...personagem, spoiler: !ids.has(personagem.id) })))
+    return res.json((await comRanques(lista)).map((personagem) => ({ ...personagem, spoiler: !ids.has(personagem.id) })))
   }
   if (ids.size === 0) return res.json([])
-  res.json(await prisma.personagens.findMany({ where: { id: { in: [...ids] } }, orderBy: { nome: 'asc' }, select: resumo }))
+  res.json(await comRanques(await prisma.personagens.findMany({ where: { id: { in: [...ids] } }, orderBy: { nome: 'asc' }, select: resumo })))
 })
 
 personagensPublicos.get('/:id', async (req, res) => {

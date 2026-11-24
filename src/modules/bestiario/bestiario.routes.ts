@@ -3,6 +3,7 @@ import { HttpError, naoEncontrado } from '../../lib/http-error.js'
 import { idDaRota } from '../../lib/params.js'
 import { prisma } from '../../lib/prisma.js'
 import { autenticar } from '../../middlewares/auth.js'
+import { removerArquivo } from '../../services/ftp.js'
 import { criaturaSchema } from './bestiario.schemas.js'
 
 const resumo = { id: true, nome: true, tipo: true, mundo: true, ranque: true, imagemBestiario: true, sistema_id: true, sistema: { select: { id: true, nome: true } } } as const
@@ -59,12 +60,18 @@ bestiarioPrivado.put('/:id', async (req, res) => {
   if (!(await prisma.bestiario.findUnique({ where: { id }, select: { id: true } }))) throw naoEncontrado('Criatura')
   await validar(dados, id)
   const { resto, recursos } = dadosDaCriatura(dados)
-  res.json(await prisma.bestiario.update({ where: { id }, data: { ...resto, recursos: { deleteMany: {}, create: recursos } }, include: incluir }))
+  const antes = await prisma.bestiario.findUnique({ where: { id }, select: { imagemBestiario: true } })
+  const criatura = await prisma.bestiario.update({ where: { id }, data: { ...resto, recursos: { deleteMany: {}, create: recursos } }, include: incluir })
+  // foto trocada ou removida sai da hospedagem
+  if (antes?.imagemBestiario && antes.imagemBestiario !== criatura.imagemBestiario) await removerArquivo(antes.imagemBestiario)
+  res.json(criatura)
 })
 
 bestiarioPrivado.delete('/:id', async (req, res) => {
   const id = idDaRota(req)
-  if (!(await prisma.bestiario.findUnique({ where: { id }, select: { id: true } }))) throw naoEncontrado('Criatura')
+  const antes = await prisma.bestiario.findUnique({ where: { id }, select: { imagemBestiario: true } })
+  if (!antes) throw naoEncontrado('Criatura')
   await prisma.bestiario.delete({ where: { id } })
+  await removerArquivo(antes.imagemBestiario)
   res.status(204).end()
 })

@@ -30,9 +30,8 @@ export const historicoSchema = z.object({
 
   // Erion
   ranque: texto(100),
-  subnivel: inteiro(1).max(5).default(1),
   qtd_treino: inteiro().default(0),
-  ponto_combate: inteiro().default(0),
+  Peso_Aura: inteiro().default(0),
   bonusPCErion: inteiro().default(0),
 
   // Aetheris
@@ -40,7 +39,7 @@ export const historicoSchema = z.object({
   nivel: inteiro(1).default(1),
   xpAtual: inteiro().default(0),
   xpProximo: inteiro(1).default(100),
-  ponto_combateAetheris: inteiro().default(0),
+  PC: inteiro().default(0),
 
   // detalhes
   arquetipo: z.enum(['Lutador', 'Duelista', 'Atirador', 'Mago', 'Suporte']).nullish().transform((v) => v ?? null),

@@ -11,6 +11,8 @@ model sagas {
   id        Int      @id @default(autoincrement())
   nome      String   @db.VarChar(255)
   descricao String?  @db.Text
+  capa      String?  @db.VarChar(500)
+  ordem     Int?
   livros    livros[]
 
   @@map("sagas")
@@ -24,6 +26,7 @@ model livros {
   ordem_serie          Int?
   capa                 String?                @db.VarChar(500)
   saga_id              Int?
+  publicado            Boolean                @default(true)
   capitulos            capitulos[]
   saga                 sagas?                 @relation(fields: [saga_id], references: [id])
   personagemHistoricos personagem_historico[]
@@ -38,6 +41,7 @@ model capitulos {
   parent_id                 Int?
   numero                    Int
   titulo                    String
+  publicado                 Boolean                @default(true)
   personagens_participantes Json?
   formas_participantes      Json?
   itens_participantes       Json?
@@ -117,14 +121,16 @@ model personagem_historico {
   resumo                String?     @db.Text
   raca_id               Int
   ranque                String?
+  /// Legado: estrelas foram removidas; coluna mantida sem uso.
   subnivel              Int         @default(1)
   classificacao         String?
   nivel                 Int         @default(1)
   xpAtual               Int         @default(0)
   xpProximo             Int         @default(100)
   qtd_treino            Int         @default(0)
-  ponto_combate         Int         @default(0)
-  ponto_combateAetheris Int         @default(0)
+  /// Peso de Erion (força física + capacidade mágica + pressão da aura). Antes: ponto_combate.
+  Peso_Aura             Int         @default(0)
+  PC                    Int         @default(0)
   bonusPCErion          Int         @default(0)
   classes               String?
   /// Lutador, Duelista, Atirador, Mago ou Suporte (fixos).
@@ -211,7 +217,7 @@ model sistemas {
   nome          String   @unique
   progressao    Json
   limite_bonus  Json
-  /// Se preenchido (1 a 5), o sistema trava as estrelas nesse valor (ex.: Demônios = 3).
+  /// Legado: trava de estrela foi removida; coluna mantida sem uso.
   estrela_fixa  Int?
   /// Como as linhagens do sistema são chamadas ("Raça", "Hierarquia"…).
   rotulo_linhagem String @default("Raça") @db.VarChar(40)
@@ -275,9 +281,23 @@ model leitores {
   login          String                 @unique @db.VarChar(100)
   senha          String                 @db.VarChar(255)
   criado_em      DateTime               @default(now())
+  /// Perfil do leitor
+  nome_exibicao  String?                @db.VarChar(60)
+  bio            String?                @db.VarChar(300)
+  avatar_url     String?                @db.VarChar(255)
+  /// Última vez que a pessoa usou o site; contas paradas há INATIVIDADE_DIAS são apagadas.
+  ultimo_acesso  DateTime               @default(now())
   leituras       leitura_salva[]
   comentarios    comentario_subcapitulo[]
   avaliacoes     avaliacao_subcapitulo[]
+  mensagensEnviadas   chat_mensagem[] @relation("ChatAutor")
+  mensagensRecebidas  chat_mensagem[] @relation("ChatDestinatario")
+  chatVistos          chat_visto[]
+  amizadesEnviadas    chat_amizade[] @relation("AmizadeDe")
+  amizadesRecebidas   chat_amizade[] @relation("AmizadePara")
+  salasCriadas        chat_sala[] @relation("SalaDono")
+  salasMembro         chat_sala_membro[]
+  @@index([ultimo_acesso])
   @@map("leitores")
 }
 
@@ -359,11 +379,13 @@ model bestiario {
   descricao             String?  @db.Text
   mundo                 String?  @db.VarChar(255)
   ranque                String?
+  /// Legado: estrelas foram removidas; coluna mantida sem uso.
   subnivel              Int      @default(1)
   classificacao         String?
   nivelMedio            Int      @default(1) @map("nivel_medio")
-  ponto_combate         Int      @default(0)
-  ponto_combateAetheris Int      @default(0)
+  /// Peso de Erion. Antes: ponto_combate.
+  Peso_Aura             Int      @default(0)
+  PC                    Int      @default(0)
   imagemBestiario       String?  @map("imagem_bestiario")
   /// Classe: sistema de poder da criatura (o ranque fica em `ranque`)
   sistema_id            Int?
@@ -371,6 +393,8 @@ model bestiario {
   habilidades           Json?
   /// Descrição estética
   aparencia             String?  @db.Text
+  /// Informações complementares (texto livre: comportamento, habitat, fraquezas…)
+  informacoes_complementares String? @db.Text
   criado_em             DateTime @default(now())
   atualizado_em         DateTime @updatedAt
   sistema               sistemas? @relation(fields: [sistema_id], references: [id], onDelete: SetNull)
@@ -394,4 +418,81 @@ model bestiario_recursos {
   @@index([bestiario_id])
   @@index([item_id])
   @@map("bestiario_recursos")
+}
+
+/// Mensagens do chat dos leitores. destinatario_id nulo = sala pública. Somem 24h depois (expira_em).
+model chat_mensagem {
+  id              Int       @id @default(autoincrement())
+  autor_id        Int
+  destinatario_id Int?
+  /// Sala privada (só entre amigos); nulo = sala pública ou conversa de duas pessoas
+  sala_id         Int?
+  texto           String    @db.VarChar(1000)
+  /// "texto", "imagem" ou "gif"
+  tipo            String    @default("texto") @db.VarChar(10)
+  midia_url       String?   @db.VarChar(500)
+  /// Marcações (capítulo, personagem, criatura, item, local): [{ tipo, id, rotulo }]
+  marcacoes       Json?
+  criado_em       DateTime  @default(now())
+  expira_em       DateTime
+  autor           leitores  @relation("ChatAutor", fields: [autor_id], references: [id], onDelete: Cascade)
+  destinatario    leitores? @relation("ChatDestinatario", fields: [destinatario_id], references: [id], onDelete: Cascade)
+  sala            chat_sala? @relation(fields: [sala_id], references: [id], onDelete: Cascade)
+  @@index([destinatario_id, id])
+  @@index([sala_id, id])
+  @@index([autor_id, destinatario_id, id])
+  @@index([expira_em])
+  @@map("chat_mensagens")
+}
+
+/// Até onde cada leitor já viu cada conversa privada (para o contador de não lidas).
+model chat_visto {
+  id        Int      @id @default(autoincrement())
+  leitor_id Int
+  outro_id  Int
+  visto_em  DateTime @default(now())
+  leitor    leitores @relation(fields: [leitor_id], references: [id], onDelete: Cascade)
+  @@unique([leitor_id, outro_id])
+  @@map("chat_vistos")
+}
+
+/// Amizade entre leitores: pedido (pendente) enviado por `de_id` para `para_id`; vira "aceita" quando aceito.
+model chat_amizade {
+  id        Int      @id @default(autoincrement())
+  de_id     Int
+  para_id   Int
+  /// "pendente" ou "aceita"
+  status    String   @default("pendente") @db.VarChar(10)
+  criado_em DateTime @default(now())
+  de        leitores @relation("AmizadeDe", fields: [de_id], references: [id], onDelete: Cascade)
+  para      leitores @relation("AmizadePara", fields: [para_id], references: [id], onDelete: Cascade)
+  @@unique([de_id, para_id])
+  @@index([para_id])
+  @@map("chat_amizades")
+}
+
+/// Sala privada criada por um leitor e aberta só para amigos dele. As mensagens somem em 24h; a sala fica.
+model chat_sala {
+  id        Int                @id @default(autoincrement())
+  nome      String             @db.VarChar(60)
+  dono_id   Int
+  criado_em DateTime           @default(now())
+  dono      leitores           @relation("SalaDono", fields: [dono_id], references: [id], onDelete: Cascade)
+  membros   chat_sala_membro[]
+  mensagens chat_mensagem[]
+  @@index([dono_id])
+  @@map("chat_salas")
+}
+
+model chat_sala_membro {
+  id        Int       @id @default(autoincrement())
+  sala_id   Int
+  leitor_id Int
+  /// Até onde o membro já leu a sala (contador de não lidas)
+  visto_em  DateTime  @default(now())
+  sala      chat_sala @relation(fields: [sala_id], references: [id], onDelete: Cascade)
+  leitor    leitores  @relation(fields: [leitor_id], references: [id], onDelete: Cascade)
+  @@unique([sala_id, leitor_id])
+  @@index([leitor_id])
+  @@map("chat_sala_membros")
 }

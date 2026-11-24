@@ -14,7 +14,9 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "criar-admin": "tsx src/scripts/criar-admin.ts",
-    "seed:regras": "tsx src/scripts/seed-regras.ts"
+    "seed:regras": "tsx src/scripts/seed-regras.ts",
+    "fundir:estrelas": "tsx src/scripts/fundir-estrelas.ts",
+    "limpar:inativos": "tsx src/scripts/limpar-inativos.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

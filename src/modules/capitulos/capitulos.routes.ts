@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { HttpError } from '../../lib/http-error.js'
 import { idDaRota } from '../../lib/params.js'
 import { autenticar } from '../../middlewares/auth.js'
-import { capituloParcialSchema, capituloSchema, conteudoSchema } from './capitulos.schemas.js'
+import { capituloParcialSchema, capituloSchema, conteudoSchema, reordenarCapitulosSchema } from './capitulos.schemas.js'
 import * as capitulos from './capitulos.service.js'
 
 /** Leitura pública: /api/capitulos */
@@ -13,16 +13,31 @@ capitulosPublicos.get('/recentes', async (_req, res) => {
 })
 
 capitulosPublicos.get('/livro/:livro_id', async (req, res) => {
-  res.json(await capitulos.listarPorLivro(idDaRota(req, 'livro_id')))
+  res.json(await capitulos.listarPorLivro(idDaRota(req, 'livro_id'), true))
 })
 
 capitulosPublicos.get('/:id', async (req, res) => {
-  res.json(await capitulos.obter(idDaRota(req)))
+  res.json(await capitulos.obter(idDaRota(req), true))
 })
 
 /** Escrita (autor): /api/private/capitulos */
 export const capitulosPrivados = Router()
 capitulosPrivados.use(autenticar)
+
+/** Leitura do autor: inclui rascunhos. */
+capitulosPrivados.get('/livro/:livro_id', async (req, res) => {
+  res.json(await capitulos.listarPorLivro(idDaRota(req, 'livro_id'), false))
+})
+
+capitulosPrivados.get('/:id', async (req, res) => {
+  res.json(await capitulos.obter(idDaRota(req), false))
+})
+
+/** Corpo: { itens: [{ id, numero, parent_id }] }. Vem antes de PUT /:id para não ser lida como id. */
+capitulosPrivados.put('/reordenar', async (req, res) => {
+  await capitulos.reordenar(reordenarCapitulosSchema.parse(req.body).itens)
+  res.status(204).end()
+})
 
 capitulosPrivados.post('/', async (req, res) => {
   res.status(201).json(await capitulos.criar(capituloSchema.parse(req.body)))

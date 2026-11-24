@@ -3,6 +3,7 @@ import { HttpError, naoEncontrado } from '../../lib/http-error.js'
 import { idDaRota } from '../../lib/params.js'
 import { prisma } from '../../lib/prisma.js'
 import { autenticar } from '../../middlewares/auth.js'
+import { removerArquivo } from '../../services/ftp.js'
 import { itemSchema } from './itens.schemas.js'
 
 const resumo = {
@@ -52,7 +53,11 @@ itensPrivados.put('/:id', async (req, res) => {
   const dados = itemSchema.parse(req.body)
   if (!(await prisma.itens.findUnique({ where: { id_item: id }, select: { id_item: true } }))) throw naoEncontrado('Item')
   await validar(dados, id)
-  res.json(await prisma.itens.update({ where: { id_item: id }, data: dados }))
+  const antes = await prisma.itens.findUnique({ where: { id_item: id }, select: { urlImagem: true } })
+  const item = await prisma.itens.update({ where: { id_item: id }, data: dados })
+  // foto trocada ou removida sai da hospedagem
+  if (antes?.urlImagem && antes.urlImagem !== item.urlImagem) await removerArquivo(antes.urlImagem)
+  res.json(item)
 })
 
 itensPrivados.delete('/:id', async (req, res) => {
@@ -61,6 +66,8 @@ itensPrivados.delete('/:id', async (req, res) => {
   const recursos = await prisma.bestiario_recursos.count({ where: { item_id: id } })
   if (recursos > 0) throw new HttpError(409, `Este item é recurso de ${recursos} ${recursos === 1 ? 'criatura' : 'criaturas'} e não pode ser excluído.`)
   if (usos > 0) throw new HttpError(409, `Este item está em ${usos} ${usos === 1 ? 'bolsa' : 'bolsas'} e não pode ser excluído.`)
+  const antes = await prisma.itens.findUnique({ where: { id_item: id }, select: { urlImagem: true } })
   await prisma.itens.delete({ where: { id_item: id } })
+  await removerArquivo(antes?.urlImagem)
   res.status(204).end()
 })

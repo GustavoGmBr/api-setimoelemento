@@ -34,6 +34,8 @@ export const capituloSchema = z.object({
   parent_id: z.coerce.number().int().positive().nullish(),
   numero: z.coerce.number().int().min(0),
   titulo: z.string().trim().min(1, 'O título é obrigatório').max(255),
+  /** Rascunho (false) não aparece para o leitor. */
+  publicado: z.boolean().optional(),
   personagens_participantes: ids,
   formas_participantes: ids,
   itens_participantes: ids,
@@ -43,4 +45,12 @@ export const capituloSchema = z.object({
 })
 
 export const capituloParcialSchema = capituloSchema.partial()
+
+/** Nova posição dos capítulos de um livro: { itens: [{ id, numero, parent_id }] } — reordenar e mover entre capítulos. */
+export const reordenarCapitulosSchema = z.object({
+  itens: z
+    .array(z.object({ id: z.number().int().positive(), numero: z.number().int().min(0), parent_id: z.number().int().positive().nullable() }))
+    .min(1)
+    .max(2000),
+})
 export type CapituloInput = z.infer<typeof capituloSchema>

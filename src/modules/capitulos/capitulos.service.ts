@@ -3,8 +3,10 @@ import { HttpError, naoEncontrado } from '../../lib/http-error.js'
 import { prisma } from '../../lib/prisma.js'
 import type { CapituloInput } from './capitulos.schemas.js'
 
+type Posicao = { id: number; numero: number; parent_id: number | null }
+
 /** Campos leves para listagens (sem o texto). */
-const resumo = { id: true, livro_id: true, parent_id: true, numero: true, titulo: true } satisfies Prisma.capitulosSelect
+const resumo = { id: true, livro_id: true, parent_id: true, numero: true, titulo: true, publicado: true } satisfies Prisma.capitulosSelect
 const ordenar = { numero: 'asc' } as const
 
 /** Json do banco: lista vazia ou null viram NULL de verdade. */
@@ -19,15 +21,17 @@ function lerIds(campo: unknown): number[] {
 }
 
 /** Capítulos de um livro, com subcapítulos (2 níveis), sem o texto. */
-export function listarPorLivro(livroId: number) {
+export function listarPorLivro(livroId: number, publico = true) {
+  const visivel = publico ? { publicado: true } : {}
   return prisma.capitulos.findMany({
-    where: { livro_id: livroId, parent_id: null },
+    where: { livro_id: livroId, parent_id: null, ...visivel },
     orderBy: ordenar,
     select: {
       ...resumo,
       personagens_participantes: true,
       formas_participantes: true,
       children: {
+        where: visivel,
         orderBy: ordenar,
         select: resumo,
       },
@@ -35,21 +39,31 @@ export function listarPorLivro(livroId: number) {
   })
 }
 
+/** Últimos subcapítulos publicados (só eles têm texto para ler). */
 export function listarRecentes() {
   return prisma.capitulos.findMany({
     take: 10,
+    where: { publicado: true, parent_id: { not: null }, parent: { publicado: true }, livros: { publicado: true } },
     orderBy: { id: 'desc' },
     select: { ...resumo, livros: { select: { titulo: true } } },
   })
 }
 
 /** Capítulo completo + nome dos personagens, formas, locais, itens e criaturas citados. */
-export async function obter(id: number) {
+export async function obter(id: number, publico = true) {
   const capitulo = await prisma.capitulos.findUnique({
     where: { id },
-    include: { children: { orderBy: ordenar, select: resumo } },
+    include: {
+      children: { where: publico ? { publicado: true } : {}, orderBy: ordenar, select: resumo },
+      livros: { select: { titulo: true, publicado: true } },
+      parent: { select: { titulo: true, numero: true, publicado: true } },
+    },
   })
   if (!capitulo) throw naoEncontrado('Capítulo')
+  // rascunho (do capítulo, do pai ou do livro) só o autor enxerga
+  if (publico && (!capitulo.publicado || !capitulo.livros.publicado || (capitulo.parent && !capitulo.parent.publicado))) {
+    throw naoEncontrado('Capítulo')
+  }
 
   // Subcapítulo sem elenco próprio usa o do capítulo pai.
   const pai = capitulo.parent_id
@@ -67,7 +81,7 @@ export async function obter(id: number) {
     idsFormas.length || idsElenco.length
       ? prisma.personagem_forma.findMany({
           where: { OR: [{ id: { in: idsFormas } }, { personagem_id: { in: idsElenco }, padrao: true }] },
-          select: { id: true, nome: true, personagem_id: true, tipo: true, descricao: true, multiplicador: true, base_pc: true, padrao: true, antiga: true, imagemRosto: true, imagemCorpo: true },
+          select: { id: true, nome: true, personagem_id: true, tipo: true, descricao: true, multiplicador: true, padrao: true, antiga: true, imagemRosto: true, imagemCorpo: true },
         })
       : Promise.resolve([]),
     buscar(capitulo.locais_participantes, (in_) =>
@@ -79,7 +93,7 @@ export async function obter(id: number) {
     buscar(capitulo.criaturas_participantes, (in_) =>
       prisma.bestiario.findMany({
         where: { id: { in: in_ } },
-        select: { id: true, nome: true, tipo: true, ranque: true, subnivel: true, imagemBestiario: true, classificacao: true, nivelMedio: true },
+        select: { id: true, nome: true, tipo: true, ranque: true, imagemBestiario: true, classificacao: true, nivelMedio: true },
       }),
     ),
   ])
@@ -134,6 +148,7 @@ export async function criar(dados: CapituloInput) {
       parent_id: dados.parent_id ?? null,
       numero: dados.numero,
       titulo: dados.titulo,
+      ...(dados.publicado !== undefined && { publicado: dados.publicado }),
       personagens_participantes: json(dados.personagens_participantes),
       formas_participantes: json(dados.formas_participantes),
       itens_participantes: json(dados.itens_participantes),
@@ -162,6 +177,7 @@ export async function atualizar(id: number, dados: Partial<CapituloInput>) {
       ...(dados.parent_id !== undefined && { parent_id: dados.parent_id }),
       ...(dados.numero !== undefined && { numero: dados.numero }),
       ...(dados.titulo !== undefined && { titulo: dados.titulo }),
+      ...(dados.publicado !== undefined && { publicado: dados.publicado }),
       personagens_participantes: json(dados.personagens_participantes),
       formas_participantes: json(dados.formas_participantes),
       itens_participantes: json(dados.itens_participantes),
@@ -196,6 +212,31 @@ export async function limparConteudo(id: number) {
     },
     select: { ...resumo },
   })
+}
+
+/**
+ * Define número e pai de vários capítulos do mesmo livro de uma vez (arrastar e soltar).
+ * Mantém a regra livro → capítulo → subcapítulo: só capítulo (sem pai) pode ter filhos.
+ */
+export async function reordenar(itens: Posicao[]) {
+  const atuais = await prisma.capitulos.findMany({ where: { id: { in: itens.map((i) => i.id) } }, select: { id: true, livro_id: true } })
+  if (atuais.length !== new Set(itens.map((i) => i.id)).size) throw new HttpError(400, 'Há capítulos que não existem mais')
+  const livros = new Set(atuais.map((c) => c.livro_id))
+  if (livros.size !== 1) throw new HttpError(400, 'Os capítulos precisam ser do mesmo livro')
+  const [livroId] = [...livros] as [number]
+
+  // estrutura final do livro: o que veio no corpo sobrescreve o que está no banco
+  const todos = await prisma.capitulos.findMany({ where: { livro_id: livroId }, select: { id: true, parent_id: true } })
+  const paiFinal = new Map(todos.map((c) => [c.id, c.parent_id]))
+  for (const i of itens) paiFinal.set(i.id, i.parent_id)
+  for (const [id, pai] of paiFinal) {
+    if (pai === null) continue
+    if (pai === id) throw new HttpError(400, 'Um capítulo não pode ficar dentro dele mesmo')
+    if (!paiFinal.has(pai)) throw new HttpError(400, 'Capítulo pai não encontrado neste livro')
+    if (paiFinal.get(pai) !== null) throw new HttpError(400, 'Subcapítulos não podem ter subcapítulos')
+  }
+
+  await prisma.$transaction(itens.map((i) => prisma.capitulos.update({ where: { id: i.id }, data: { numero: i.numero, parent_id: i.parent_id } })))
 }
 
 export async function remover(id: number) {

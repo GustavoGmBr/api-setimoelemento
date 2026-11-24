@@ -38,7 +38,6 @@ const SISTEMAS = [
       ['Primordial', 1800, 2800],
     ]),
     limite_bonus: { Inferior: 80, Bestial: 120, Combatente: 180, Oculta: 250, Superior: 400, Desastre: 750, Primordial: 2000 },
-    estrela_fixa: 3,
     rotulo_linhagem: 'Hierarquia',
   },
 ]

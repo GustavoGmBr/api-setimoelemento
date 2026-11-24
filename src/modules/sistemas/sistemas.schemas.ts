@@ -13,8 +13,6 @@ export const sistemaSchema = z
     progressao: z.array(faixaSchema).min(1, 'Cadastre ao menos uma faixa'),
     /** Teto de bônus por raridade: { "Comum": 50 } */
     limite_bonus: z.record(z.string(), z.number().int().min(0)),
-    /** Trava de estrela: 1 a 5 fixa as estrelas nesse valor; vazio = o usuário escolhe. */
-    estrela_fixa: z.number().int().min(1).max(5).nullish(),
     /** Último ranque aberto: continua em degraus de `degrau_estrela` PC, com estrelas. */
     ranque_aberto: z.boolean().default(false),
     degrau_estrela: z.number().int().min(1).nullish(),
