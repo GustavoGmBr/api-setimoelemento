@@ -16,6 +16,7 @@ import { racasPrivadas, racasPublicas } from './modules/racas/racas.routes.js'
 import { leitoresRoutes } from './modules/leitores/leitores.routes.js'
 import { chatRoutes } from './modules/chat/chat.routes.js'
 import { bibliotecaPrivada, bibliotecaPublica } from './modules/biblioteca/biblioteca.routes.js'
+import { loreRoutes } from './modules/lore/lore.routes.js'
 
 export const routes = Router()
 
@@ -31,6 +32,7 @@ routes.get('/health', async (_req, res) => {
 routes.use('/auth', authRoutes)
 routes.use('/leitores', leitoresRoutes)
 routes.use('/chat', chatRoutes)
+routes.use('/lore', loreRoutes)
 
 routes.use('/sagas', sagasPublicas)
 routes.use('/private/sagas', sagasPrivadas)
