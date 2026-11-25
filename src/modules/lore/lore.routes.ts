@@ -155,11 +155,21 @@ function emTexto(l: Lore): string {
 /** Cache curto: o n8n consulta a cada mensagem do chat. */
 let cache: { em: number; dados: Lore } | null = null
 
-loreRoutes.get('/', async (req, res) => {
+/** Lore público (com cache de 1 min), também usado pelo assistente. */
+export async function obterLore(): Promise<Lore> {
   if (!cache || Date.now() - cache.em > 60_000) cache = { em: Date.now(), dados: await montarLore() }
+  return cache.dados
+}
+
+export async function obterLoreEmTexto(): Promise<string> {
+  return emTexto(await obterLore())
+}
+
+loreRoutes.get('/', async (req, res) => {
+  await obterLore()
   if (req.query.formato === 'texto') {
     if (req.query.baixar === '1') res.setHeader('Content-Disposition', 'attachment; filename="lore.md"')
-    return res.type('text/markdown; charset=utf-8').send(emTexto(cache.dados))
+    return res.type('text/markdown; charset=utf-8').send(emTexto(cache!.dados))
   }
-  res.json(cache.dados)
+  res.json(cache!.dados)
 })

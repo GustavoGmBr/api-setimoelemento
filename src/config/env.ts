@@ -20,6 +20,9 @@ const schema = z.object({
   // Dias sem acesso até a conta de leitor ser apagada com todos os dados.
   INATIVIDADE_DIAS: z.coerce.number().int().min(1).default(30),
   JWT_EXPIRES_IN: z.string().default('24h'),
+  // Assistente de escrita (Gemini). Sem chave, a rota responde que não está configurada.
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
   CORS_ORIGINS: z
     .string()
     .default('')

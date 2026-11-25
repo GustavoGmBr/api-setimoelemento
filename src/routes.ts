@@ -17,6 +17,7 @@ import { leitoresRoutes } from './modules/leitores/leitores.routes.js'
 import { chatRoutes } from './modules/chat/chat.routes.js'
 import { bibliotecaPrivada, bibliotecaPublica } from './modules/biblioteca/biblioteca.routes.js'
 import { loreRoutes } from './modules/lore/lore.routes.js'
+import { assistentePrivado } from './modules/assistente/assistente.routes.js'
 
 export const routes = Router()
 
@@ -63,3 +64,4 @@ routes.use('/locais', locaisPublicos)
 routes.use('/private/locais', locaisPrivados)
 routes.use('/bestiario', bestiarioPublico)
 routes.use('/private/bestiario', bestiarioPrivado)
+routes.use('/private/assistente', assistentePrivado)
