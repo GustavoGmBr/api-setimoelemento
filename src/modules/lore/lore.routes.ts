@@ -157,6 +157,9 @@ let cache: { em: number; dados: Lore } | null = null
 
 loreRoutes.get('/', async (req, res) => {
   if (!cache || Date.now() - cache.em > 60_000) cache = { em: Date.now(), dados: await montarLore() }
-  if (req.query.formato === 'texto') return res.type('text/markdown; charset=utf-8').send(emTexto(cache.dados))
+  if (req.query.formato === 'texto') {
+    if (req.query.baixar === '1') res.setHeader('Content-Disposition', 'attachment; filename="lore.md"')
+    return res.type('text/markdown; charset=utf-8').send(emTexto(cache.dados))
+  }
   res.json(cache.dados)
 })
