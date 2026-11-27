@@ -27,15 +27,13 @@ async function comRanques<T extends { id: number; imagemRosto: string | null }>(
   const ids = lista.map((p) => p.id)
   const [hist, formas] = await Promise.all([
     prisma.personagem_historico.findMany({ where: { personagem_id: { in: ids } }, orderBy: { id: 'asc' }, select: { id: true, personagem_id: true, ranque: true, classificacao: true, formas_desbloqueadas: true } }),
-    prisma.personagem_forma.findMany({ where: { personagem_id: { in: ids }, OR: [{ padrao: true }, { tipo: 'Crescimento' }] }, orderBy: { id: 'asc' }, select: { id: true, personagem_id: true, tipo: true, padrao: true, imagemRosto: true, imagemCorpo: true } }),
+    prisma.personagem_forma.findMany({ where: { personagem_id: { in: ids }, tipo: 'Crescimento' }, orderBy: { id: 'asc' }, select: { id: true, personagem_id: true, imagemRosto: true, imagemCorpo: true } }),
   ])
   const ultimo = new Map<number, { ranque: string | null; classificacao: string | null }>()
   for (const h of hist) ultimo.set(h.personagem_id, { ranque: h.ranque, classificacao: h.classificacao })
-  // Foto dos cartões: forma de crescimento ligada ao histórico mais recente; sem ela, a forma padrão (que não seja de crescimento); sem foto, a do cadastro.
+  // Foto dos cartões: forma de crescimento ligada ao histórico mais recente; sem nenhuma, a foto do cadastro.
   const fotoDe = (f: { imagemRosto: string | null; imagemCorpo: string | null }) => f.imagemRosto || f.imagemCorpo
-  const fotoPadrao = new Map<number, string>()
-  for (const f of formas) if (f.padrao && f.tipo !== 'Crescimento' && fotoDe(f)) fotoPadrao.set(f.personagem_id, fotoDe(f)!)
-  const crescimento = new Map(formas.filter((f) => f.tipo === 'Crescimento' && fotoDe(f)).map((f) => [f.id, f]))
+  const crescimento = new Map(formas.filter((f) => fotoDe(f)).map((f) => [f.id, f]))
   const doHistorico = new Map<number, number[]>()
   for (const h of hist) {
     if (!Array.isArray(h.formas_desbloqueadas)) continue
@@ -51,7 +49,7 @@ async function comRanques<T extends { id: number; imagemRosto: string | null }>(
       .pop()
     if (f) fotoCrescimento.set(h.personagem_id, fotoDe(f)!)
   }
-  return lista.map((p) => ({ ...p, imagemRosto: fotoCrescimento.get(p.id) ?? fotoPadrao.get(p.id) ?? p.imagemRosto, ranque: ultimo.get(p.id)?.ranque ?? null, classificacao: ultimo.get(p.id)?.classificacao ?? null }))
+  return lista.map((p) => ({ ...p, imagemRosto: fotoCrescimento.get(p.id) ?? p.imagemRosto, ranque: ultimo.get(p.id)?.ranque ?? null, classificacao: ultimo.get(p.id)?.classificacao ?? null }))
 }
 
 /** Leitura pública: /api/personagens */
