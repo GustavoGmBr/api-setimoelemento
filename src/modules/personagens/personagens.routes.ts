@@ -22,12 +22,22 @@ const resumo = {
 } as const
 
 /** Acrescenta o ranque mais recente de cada personagem (Aetheris = `ranque`, Erion = `classificacao`), para filtros e cartões. */
-async function comRanques<T extends { id: number }>(lista: T[]) {
+async function comRanques<T extends { id: number; imagemRosto: string | null }>(lista: T[]) {
   if (!lista.length) return lista.map((p) => ({ ...p, ranque: null as string | null, classificacao: null as string | null }))
-  const hist = await prisma.personagem_historico.findMany({ where: { personagem_id: { in: lista.map((p) => p.id) } }, orderBy: { id: 'asc' }, select: { personagem_id: true, ranque: true, classificacao: true } })
+  const ids = lista.map((p) => p.id)
+  const [hist, padroes] = await Promise.all([
+    prisma.personagem_historico.findMany({ where: { personagem_id: { in: ids } }, orderBy: { id: 'asc' }, select: { personagem_id: true, ranque: true, classificacao: true } }),
+    prisma.personagem_forma.findMany({ where: { personagem_id: { in: ids }, padrao: true }, orderBy: { id: 'asc' }, select: { personagem_id: true, imagemRosto: true, imagemCorpo: true } }),
+  ])
   const ultimo = new Map<number, { ranque: string | null; classificacao: string | null }>()
   for (const h of hist) ultimo.set(h.personagem_id, { ranque: h.ranque, classificacao: h.classificacao })
-  return lista.map((p) => ({ ...p, ranque: ultimo.get(p.id)?.ranque ?? null, classificacao: ultimo.get(p.id)?.classificacao ?? null }))
+  // a foto dos cartões é a da forma padrão (a mais recente); sem foto na forma, vale a do cadastro
+  const fotoPadrao = new Map<number, string>()
+  for (const f of padroes) {
+    const foto = f.imagemRosto || f.imagemCorpo
+    if (foto) fotoPadrao.set(f.personagem_id, foto)
+  }
+  return lista.map((p) => ({ ...p, imagemRosto: fotoPadrao.get(p.id) ?? p.imagemRosto, ranque: ultimo.get(p.id)?.ranque ?? null, classificacao: ultimo.get(p.id)?.classificacao ?? null }))
 }
 
 /** Leitura pública: /api/personagens */
