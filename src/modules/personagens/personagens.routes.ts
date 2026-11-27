@@ -31,7 +31,7 @@ async function comRanques<T extends { id: number; imagemRosto: string | null }>(
   ])
   const ultimo = new Map<number, { ranque: string | null; classificacao: string | null }>()
   for (const h of hist) ultimo.set(h.personagem_id, { ranque: h.ranque, classificacao: h.classificacao })
-  // Foto dos cartões: forma de crescimento ligada ao histórico mais recente; sem nenhuma, a foto do cadastro.
+  // Foto dos cartões: forma de crescimento ligada ao histórico mais recente; sem forma ligada nele, a foto do cadastro.
   const fotoDe = (f: { imagemRosto: string | null; imagemCorpo: string | null }) => f.imagemRosto || f.imagemCorpo
   const crescimento = new Map(formas.filter((f) => fotoDe(f)).map((f) => [f.id, f]))
   const doHistorico = new Map<number, number[]>()
@@ -40,8 +40,10 @@ async function comRanques<T extends { id: number; imagemRosto: string | null }>(
     doHistorico.set(h.id, h.formas_desbloqueadas.map((v) => Number((typeof v === 'object' && v !== null ? ((v as Record<string, unknown>).id ?? (v as Record<string, unknown>).forma_id) : v))).filter((n) => Number.isInteger(n) && n > 0))
   }
   const fotoCrescimento = new Map<number, string>()
+  const visto = new Set<number>()
   for (const h of [...hist].reverse()) {
-    if (fotoCrescimento.has(h.personagem_id)) continue
+    if (visto.has(h.personagem_id)) continue
+    visto.add(h.personagem_id) // só vale o histórico mais recente de cada personagem
     const f = (doHistorico.get(h.id) ?? [])
       .map((id) => crescimento.get(id))
       .filter((x): x is NonNullable<typeof x> => !!x && x.personagem_id === h.personagem_id)
