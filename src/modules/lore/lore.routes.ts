@@ -57,7 +57,7 @@ async function montarLore() {
             historicos: {
               where: { OR: [{ capitulo: { publicado: true } }, { capitulo_id: null, livro: { publicado: true } }] },
               orderBy: { id: 'asc' },
-              include: { raca: { select: { nome: true } }, livro: { select: { titulo: true } }, capitulo: { select: { numero: true, titulo: true } } },
+              include: { raca: { select: { nome: true } }, livro: { select: { titulo: true } }, capitulo: { select: { numero: true, titulo: true, parent: { select: { numero: true } } } } },
             },
           },
         })
@@ -103,7 +103,7 @@ async function montarLore() {
       formas: p.formas.map((f) => ({ nome: f.nome, tipo: f.tipo, padrao: f.padrao, antiga: f.antiga, descricao: t(f.descricao) || null })),
       momentos: p.historicos.map((h) => ({
         livro: h.livro?.titulo ?? null,
-        capitulo: h.capitulo ? `${h.capitulo.numero} · ${h.capitulo.titulo}` : null,
+        capitulo: h.capitulo ? `${h.capitulo.parent ? `${h.capitulo.parent.numero}.` : ''}${h.capitulo.numero} · ${h.capitulo.titulo}` : null,
         idade: h.idade,
         titulo: h.titulo,
         raca: h.raca.nome,

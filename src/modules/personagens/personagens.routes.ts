@@ -91,7 +91,7 @@ personagensPublicos.get('/:id/ficha', async (req, res) => {
         include: {
           raca: { select: { id: true, nome: true } },
           livro: { select: { id: true, titulo: true, saga: { select: { nome: true } } } },
-          capitulo: { select: { id: true, numero: true, titulo: true } },
+          capitulo: { select: { id: true, numero: true, titulo: true, parent: { select: { numero: true, titulo: true } } } },
         },
       },
     },
