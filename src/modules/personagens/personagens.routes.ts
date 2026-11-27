@@ -31,10 +31,10 @@ async function comRanques<T extends { id: number; imagemRosto: string | null }>(
   ])
   const ultimo = new Map<number, { ranque: string | null; classificacao: string | null }>()
   for (const h of hist) ultimo.set(h.personagem_id, { ranque: h.ranque, classificacao: h.classificacao })
-  // Foto dos cartões: forma de crescimento ligada ao histórico mais recente; sem ela, a forma padrão; sem foto, a do cadastro.
+  // Foto dos cartões: forma de crescimento ligada ao histórico mais recente; sem ela, a forma padrão (que não seja de crescimento); sem foto, a do cadastro.
   const fotoDe = (f: { imagemRosto: string | null; imagemCorpo: string | null }) => f.imagemRosto || f.imagemCorpo
   const fotoPadrao = new Map<number, string>()
-  for (const f of formas) if (f.padrao && fotoDe(f)) fotoPadrao.set(f.personagem_id, fotoDe(f)!)
+  for (const f of formas) if (f.padrao && f.tipo !== 'Crescimento' && fotoDe(f)) fotoPadrao.set(f.personagem_id, fotoDe(f)!)
   const crescimento = new Map(formas.filter((f) => f.tipo === 'Crescimento' && fotoDe(f)).map((f) => [f.id, f]))
   const doHistorico = new Map<number, number[]>()
   for (const h of hist) {
